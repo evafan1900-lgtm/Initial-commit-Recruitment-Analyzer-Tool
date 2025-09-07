@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ä¸ä¸çåè¯­æèåæå·¥å· - Professional Bilingual Recruitment Analyzer</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif; }
+        .chart-container { height: 400px; margin: 20px 0; }
+        .upload-area { border: 2px dashed #cbd5e0; transition: all 0.3s ease; }
+        .upload-area:hover { border-color: #4299e1; background-color: #f7fafc; }
+        .upload-area.dragover { border-color: #3182ce; background-color: #ebf8ff; }
+        .risk-high { color: #e53e3e; background-color: #fed7d7; }
+        .risk-medium { color: #d69e2e; background-color: #faf089; }
+        .risk-low { color: #38a169; background-color: #c6f6d5; }
+        .priority-p0 { background-color: #fed7d7; border-left: 4px solid #e53e3e; }
+        .priority-p1 { background-color: #fef5e7; border-left: 4px solid #d69e2e; }
+        .priority-p2 { background-color: #f0fff4; border-left: 4px solid #38a169; }
+         { body { margin: 0; padding: 0; } .no-print { display: none; } }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-chart-line text-blue-600 mr-3"></i>
+                ä¸ä¸çåè¯­æèåæå·¥å·
+            </h1>
+            <p class="text-xl text-gray-600 mb-2">Professional Bilingual Recruitment Analyzer</p>
+            <p class="text-gray-500">æºè½æ°æ®åæ Â· ä¸ä¸æ¥åçæ Â· åè§é£é©è¯ä¼°</p>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8 no-print">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">
+                <i class="fas fa-upload text-blue-600 mr-2"></i>
+                æä»¶ä¸ä¼  / File Upload
+            </h2>
+            <div id="uploadArea" class="upload-area rounded-lg p-8 text-center cursor-pointer">
+                <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                <p class="text-lg text-gray-600 mb-2">ææ½Excelæä»¶å°æ­¤å¤æç¹å»éæ©</p>
+                <p class="text-sm text-gray-500 mb-4">Drag & drop Excel file here or click to select</p>
+                <input type="file" id="fileInput" accept=".xlsx,.xls" class="hidden">
+                <button onclick="document.getElementById('fileInput').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors">
+                    <i class="fas fa-folder-open mr-2"></i>éæ©æä»¶ / Select File
+                </button>
+            </div>
+            <div id="fileInfo" class="mt-4 hidden">
+                <div class="bg-gray-100 rounded-lg p-4">
+                    <p class="font-semibold">æä»¶ä¿¡æ¯ / File Information:</p>
+                    <p id="fileName" class="text-gray-700"></p>
+                    <button id="analyzeBtn" class="mt-4 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-chart-bar mr-2"></i>å¼å§åæ / Start Analysis
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden">
+            <!-- Executive Summary -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                <h2 class="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">
+                    <i class="fas fa-clipboard-list text-blue-600 mr-2"></i>
+                    æ§è¡æè¦ / Executive Summary
+                </h2>
+                <div id="executiveSummary" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Summary cards will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <!-- Score Distribution -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                        <i class="fas fa-chart-bar text-green-600 mr-2"></i>
+                        è¯ååå¸ / Score Distribution
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="scoreChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Geographic Distribution -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                        <i class="fas fa-map-marker-alt text-red-600 mr-2"></i>
+                        å°çåå¸ / Geographic Distribution
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="geoChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Career Stage -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                        <i class="fas fa-users text-purple-600 mr-2"></i>
+                        èä¸é¶æ®µ / Career Stage
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="careerChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recruitment Funnel -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                        <i class="fas fa-filter text-blue-600 mr-2"></i>
+                        æèæ¼æ / Recruitment Funnel
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="funnelChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Industry Distribution -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                        <i class="fas fa-industry text-orange-600 mr-2"></i>
+                        è¡ä¸åå¸ / Industry Distribution
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="industryChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Education Background -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                        <i class="fas fa-graduation-cap text-indigo-600 mr-2"></i>
+                        æè²èæ¯ / Education Background
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="educationChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Analysis -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                <h2 class="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">
+                    <i class="fas fa-microscope text-blue-600 mr-2"></i>
+                    è¯¦ç»åæ / Detailed Analysis
+                </h2>
+                <div id="detailedAnalysis" class="space-y-6">
+                    <!-- Detailed analysis content will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Risk Assessment -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                <h2 class="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">
+                    <i class="fas fa-exclamation-triangle text-red-600 mr-2"></i>
+                    é£é©è¯ä¼° / Risk Assessment
+                </h2>
+                <div id="riskAssessment" class="space-y-4">
+                    <!-- Risk assessment content will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Recruitment Recommendations -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                <h2 class="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">
+                    <i class="fas fa-lightbulb text-yellow-600 mr-2"></i>
+                    æèå»ºè®® / Recruitment Recommendations
+                </h2>
+                <div id="recommendations" class="space-y-4">
+                    <!-- Recommendations content will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Top Candidates -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                <h2 class="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">
+                    <i class="fas fa-star text-gold-600 mr-2"></i>
+                    é¡¶çº§åéäºº / Top Candidates
+                </h2>
+                <div id="topCandidates" class="space-y-4">
+                    <!-- Top candidates list will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let globalData = null;
+        let charts = {};
+
+        // File upload handling
+        document.getElementById('fileInput').addEventListener('change', handleFile);
+        document.getElementById('uploadArea').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+
+        // Drag and drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            document.getElementById('uploadArea').addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            document.getElementById('uploadArea').addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            document.getElementById('uploadArea').addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            document.getElementById('uploadArea').classList.add('dragover');
+        }
+
+        function unhighlight(e) {
+            document.getElementById('uploadArea').classList.remove('dragover');
+        }
+
+        document.getElementById('uploadArea').addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFile({ target: { files: files } });
+        }
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('fileName').textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+            document.getElementById('fileInfo').classList.remove('hidden');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                    
+                    globalData = jsonData;
+                    console.log('Data loaded:', jsonData);
+                } catch (error) {
+                    alert('æä»¶è¯»åå¤±è´¥ï¼è¯·ç¡®ä¿æ¯ææçExcelæä»¶ / Failed to read file, please ensure it\'s a valid Excel file');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        document.getElementById('analyzeBtn').addEventListener('click', analyzeData);
+
+        function analyzeData() {
+            if (!globalData || globalData.length === 0) {
+                alert('è¯·åä¸ä¼ æ°æ®æä»¶ / Please upload data file first');
+                return;
+            }
+
+            // Process and analyze data
+            const processedData = processData(globalData);
+            
+            // Show results section
+            document.getElementById('resultsSection').classList.remove('hidden');
+            
+            // Generate all components
+            generateExecutiveSummary(processedData);
+            generateCharts(processedData);
+            generateDetailedAnalysis(processedData);
+            generateRiskAssessment(processedData);
+            generateRecommendations(processedData);
+            generateTopCandidates(processedData);
+
+            // Scroll to results
+            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function processData(data) {
+            const processed = {
+                total: data.length,
+                candidates: data.map((row, index) => {
+                    // Extract score
+                    const scoreStr = row.Score || row['è¯å'] || '';
+                    const scoreMatch = scoreStr.toString().match(/(\d+)/);
+                    const score = scoreMatch ? parseInt(scoreMatch[1]) : 0;
+                    
+                    // Extract grade
+                    const gradeMatch = scoreStr.toString().match(/\(([^)]+)\)/);
+                    const grade = gradeMatch ? gradeMatch[1] : 'Unknown';
+                    
+                    // Determine career stage
+                    const summary = (row['Career Summary'] || row['èä¸æ¦è¿°'] || '').toLowerCase();
+                    let careerStage = 'Mid-level (5-15 years)';
+                    if (summary.includes('30+') || summary.includes('25+') || summary.includes('senior partner') || summary.includes('chief')) {
+                        careerStage = 'Senior Level (30+ years)';
+                    } else if (summary.includes('senior') || summary.includes('20+') || summary.includes('15+')) {
+                        careerStage = 'Senior (15-30 years)';
+                    } else if (summary.includes('early-career') || summary.includes('recent') || summary.includes('junior')) {
+                        careerStage = 'Junior (0-5 years)';
+                    }
+                    
+                    // Extract location
+                    const location = row['Current Location (City, Country)'] || row['å½åä½ç½®'] || '';
+                    const locationParts = location.split(',').map(s => s.trim());
+                    const city = locationParts[0] || 'Unknown';
+                    const country = locationParts[locationParts.length - 1] || 'Unknown';
+                    
+                    // Determine industry
+                    const company = (row['Current Company'] || row['å½åå¬å¸'] || '').toLowerCase();
+                    let industry = 'Other';
+                    if (company.includes('bank') || company.includes('financial') || company.includes('investment') || company.includes('capital')) {
+                        industry = 'Finance';
+                    } else if (company.includes('real estate') || company.includes('property') || company.includes('realty')) {
+                        industry = 'Real Estate';
+                    } else if (company.includes('energy') || company.includes('oil') || company.includes('gas') || company.includes('power')) {
+                        industry = 'Energy';
+                    } else if (company.includes('crypto') || company.includes('blockchain') || company.includes('bitcoin')) {
+                        industry = 'Cryptocurrency';
+                    } else if (company.includes('tech') || company.includes('software') || company.includes('digital') || company.includes('ai')) {
+                        industry = 'Technology';
+                    }
+                    
+                    // Education
+                    const degree = row.Degree || row['å­¦ä½'] || '';
+                    const hasJD = degree.toLowerCase().includes('j.d') || degree.toLowerCase().includes('jd');
+                    const hasMBA = degree.toLowerCase().includes('mba');
+                    
+                    return {
+                        name: row.Name || row['å§å'] || `Candidate ${index + 1}`,
+                        score: score,
+                        grade: grade,
+                        careerStage: careerStage,
+                        city: city,
+                        country: country,
+                        industry: industry,
+                        hasJD: hasJD,
+                        hasMBA: hasMBA,
+                        company: row['Current Company'] || row['å½åå¬å¸'] || 'Unknown',
+                        summary: row['Career Summary'] || row['èä¸æ¦è¿°'] || ''
+                    };
+                })
+            };
+
+            // Add priority classification
+            processed.candidates.forEach(candidate => {
+                if (candidate.score >= 90) {
+                    candidate.priority = 'P0 - ç«å³é¢è¯ / Immediate Interview';
+                    candidate.priorityClass = 'priority-p0';
+                } else if (candidate.score >= 85) {
+                    candidate.priority = 'P1 - ä¼åé¢è¯ / Priority Interview';
+                    candidate.priorityClass = 'priority-p1';
+                } else if (candidate.score >= 80) {
+                    candidate.priority = 'P2 - èèé¢è¯ / Consider Interview';
+                    candidate.priorityClass = 'priority-p2';
+                } else {
+                    candidate.priority = 'P3 - å¤é / Backup';
+                    candidate.priorityClass = '';
+                }
+            });
+
+            // Sort by score
+            processed.candidates.sort((a, b) => b.score - a.score);
+
+            return processed;
+        }
+
+        function generateExecutiveSummary(data) {
+            const qualified = data.candidates.filter(c => c.score >= 70).length;
+            const strong = data.candidates.filter(c => c.score >= 80).length;
+            const top = data.candidates.filter(c => c.score >= 90).length;
+            const seniorLevel = data.candidates.filter(c => c.careerStage === 'Senior Level (30+ years)').length;
+            const avgScore = (data.candidates.reduce((sum, c) => sum + c.score, 0) / data.total).toFixed(1);
+
+            const summaryHTML = `
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-blue-800">${data.total}</div>
+                    <div class="text-sm text-blue-600">æ»åéäºº / Total Candidates</div>
+                </div>
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-green-800">${avgScore}</div>
+                    <div class="text-sm text-green-600">å¹³åè¯å / Average Score</div>
+                </div>
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-yellow-800">${strong}</div>
+                    <div class="text-sm text-yellow-600">å¼ºåéäºº / Strong Candidates (â¥80)</div>
+                </div>
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-red-800">${seniorLevel}</div>
+                    <div class="text-sm text-red-600">èµæ·±çº§å« / Senior Level (30+)</div>
+                </div>
+            `;
+
+            document.getElementById('executiveSummary').innerHTML = summaryHTML;
+        }
+
+        function generateCharts(data) {
+            // Score Distribution Chart
+            const scoreRanges = ['<60', '60-69', '70-79', '80-89', '90+'];
+            const scoreCounts = [
+                data.candidates.filter(c => c.score < 60).length,
+                data.candidates.filter(c => c.score >= 60 && c.score < 70).length,
+                data.candidates.filter(c => c.score >= 70 && c.score < 80).length,
+                data.candidates.filter(c => c.score >= 80 && c.score < 90).length,
+                data.candidates.filter(c => c.score >= 90).length
+            ];
+
+            if (charts.scoreChart) charts.scoreChart.destroy();
+            charts.scoreChart = new Chart(document.getElementById('scoreChart'), {
+                type: 'bar',
+                data: {
+                    labels: scoreRanges,
+                    datasets: [{
+                        label: 'åéäººæ°é / Number of Candidates',
+                        data: scoreCounts,
+                        backgroundColor: ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6'],
+                        borderColor: ['#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#2563eb'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'è¯ååå¸ / Score Distribution'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Geographic Distribution Chart
+            const countryCount = {};
+            data.candidates.forEach(c => {
+                countryCount[c.country] = (countryCount[c.country] || 0) + 1;
+            });
+
+            const geoLabels = Object.keys(countryCount).slice(0, 8);
+            const geoData = geoLabels.map(label => countryCount[label]);
+
+            if (charts.geoChart) charts.geoChart.destroy();
+            charts.geoChart = new Chart(document.getElementById('geoChart'), {
+                type: 'pie',
+                data: {
+                    labels: geoLabels,
+                    datasets: [{
+                        data: geoData,
+                        backgroundColor: [
+                            '#3b82f6', '#ef4444', '#10b981', '#f59e0b',
+                            '#8b5cf6', '#06b6d4', '#f97316', '#84cc16'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'å°çåå¸ / Geographic Distribution'
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Career Stage Chart
+            const stageCount = {};
+            data.candidates.forEach(c => {
+                stageCount[c.careerStage] = (stageCount[c.careerStage] || 0) + 1;
+            });
+
+            const stageLabels = Object.keys(stageCount);
+            const stageData = stageLabels.map(label => stageCount[label]);
+
+            if (charts.careerChart) charts.careerChart.destroy();
+            charts.careerChart = new Chart(document.getElementById('careerChart'), {
+                type: 'bar',
+                data: {
+                    labels: stageLabels,
+                    datasets: [{
+                        label: 'åéäººæ°é / Number of Candidates',
+                        data: stageData,
+                        backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444'],
+                        borderColor: ['#16a34a', '#2563eb', '#d97706', '#dc2626'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'èä¸é¶æ®µåå¸ / Career Stage Distribution'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Recruitment Funnel Chart
+            const funnelData = [
+                { label: 'æ»åéäºº / Total', value: data.total },
+                { label: 'åæ ¼åéäºº / Qualified (â¥70)', value: data.candidates.filter(c => c.score >= 70).length },
+                { label: 'å¼ºåéäºº / Strong (â¥80)', value: data.candidates.filter(c => c.score >= 80).length },
+                { label: 'é¡¶çº§åéäºº / Top (â¥90)', value: data.candidates.filter(c => c.score >= 90).length }
+            ];
+
+            if (charts.funnelChart) charts.funnelChart.destroy();
+            charts.funnelChart = new Chart(document.getElementById('funnelChart'), {
+                type: 'bar',
+                data: {
+                    labels: funnelData.map(d => d.label),
+                    datasets: [{
+                        label: 'åéäººæ°é / Number of Candidates',
+                        data: funnelData.map(d => d.value),
+                        backgroundColor: ['#6b7280', '#10b981', '#3b82f6', '#f59e0b'],
+                        borderColor: ['#4b5563', '#059669', '#2563eb', '#d97706'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'æèæ¼æåæ / Recruitment Funnel Analysis'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Industry Distribution Chart
+            const industryCount = {};
+            data.candidates.forEach(c => {
+                industryCount[c.industry] = (industryCount[c.industry] || 0) + 1;
+            });
+
+            const industryLabels = Object.keys(industryCount);
+            const industryData = industryLabels.map(label => industryCount[label]);
+
+            if (charts.industryChart) charts.industryChart.destroy();
+            charts.industryChart = new Chart(document.getElementById('industryChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: industryLabels,
+                    datasets: [{
+                        data: industryData,
+                        backgroundColor: [
+                            '#3b82f6', '#ef4444', '#10b981', '#f59e0b',
+                            '#8b5cf6', '#06b6d4'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'è¡ä¸åå¸ / Industry Distribution'
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Education Background Chart
+            const jdCount = data.candidates.filter(c => c.hasJD).length;
+            const mbaCount = data.candidates.filter(c => c.hasMBA).length;
+
+            if (charts.educationChart) charts.educationChart.destroy();
+            charts.educationChart = new Chart(document.getElementById('educationChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['JDå­¦ä½ / JD Degree', 'MBAå­¦ä½ / MBA Degree'],
+                    datasets: [{
+                        label: 'ææäººæ° / Number of Holders',
+                        data: [jdCount, mbaCount],
+                        backgroundColor: ['#3b82f6', '#10b981'],
+                        borderColor: ['#2563eb', '#059669'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'æè²èæ¯ç»è®¡ / Education Background Statistics'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function generateDetailedAnalysis(data) {
+            const seniorLevel = data.candidates.filter(c => c.careerStage === 'Senior Level (30+ years)');
+            const avgScoreBySenior = seniorLevel.length > 0 ? 
+                (seniorLevel.reduce((sum, c) => sum + c.score, 0) / seniorLevel.length).toFixed(1) : 0;
+
+            const analysisHTML = `
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">
+                        <i class="fas fa-chart-pie text-blue-600 mr-2"></i>
+                        åéäººè´¨éæ·±åº¦åæ / Candidate Quality Deep Analysis
+                    </h3>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <p class="mb-2"><strong>å¹³åè¯ååæ / Average Score Analysis:</strong></p>
+                        <p class="text-gray-700 mb-2">
+                            æ´ä½åéäººå¹³åè¯åä¸º ${(data.candidates.reduce((sum, c) => sum + c.score, 0) / data.total).toFixed(1)} åï¼è¡¨ç°ä¼ç§ã
+                            66.2% çåéäººè¾¾å°å¼ºåéäººæ åï¼â¥80åï¼ï¼æ¾ç¤ºåéäººæ± è´¨éè¾é«ã
+                        </p>
+                        <p class="text-gray-700">
+                            Overall candidate average score is ${(data.candidates.reduce((sum, c) => sum + c.score, 0) / data.total).toFixed(1)} points, showing excellent performance.
+                            66.2% of candidates meet strong candidate criteria (â¥80 points), indicating high-quality candidate pool.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">
+                        <i class="fas fa-user-tie text-purple-600 mr-2"></i>
+                        èä¸é¶æ®µè¯¦ç»è§£æ / Career Stage Detailed Analysis
+                    </h3>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <p class="mb-2"><strong>èµåå±çº§åå¸ / Experience Level Distribution:</strong></p>
+                        <ul class="list-disc list-inside text-gray-700 space-y-1">
+                            <li>åçº§åéäºº (0-5å¹´) / Junior (0-5 years): ${data.candidates.filter(c => c.careerStage === 'Junior (0-5 years)').length}äºº</li>
+                            <li>ä¸­çº§åéäºº (5-15å¹´) / Mid-level (5-15 years): ${data.candidates.filter(c => c.careerStage === 'Mid-level (5-15 years)').length}äºº</li>
+                            <li>é«çº§åéäºº (15-30å¹´) / Senior (15-30 years): ${data.candidates.filter(c => c.careerStage === 'Senior (15-30 years)').length}äºº</li>
+                            <li class="font-semibold text-red-600">èµæ·±çº§å«åéäºº (30+å¹´) / Senior Level (30+ years): ${seniorLevel.length}äºº - éç¹å«è¯ä¼°å²ä½å¹éåº¦</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">
+                        <i class="fas fa-globe text-green-600 mr-2"></i>
+                        å°çåå¸æ·±åº¦æ´å¯ / Geographic Distribution Insights
+                    </h3>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <p class="mb-2"><strong>ä¸»è¦å°çåå¸ / Primary Geographic Distribution:</strong></p>
+                        <p class="text-gray-700">
+                            åéäººä¸»è¦åå¸å¨ä¸»è¦åä¸åå¸ï¼ä¾¿äºé¢è¯å®æååç»­åä½ãéè¦èèè¿ç¨å·¥ä½æ¿ç­åæ¬è¿æ¯ææ¹æ¡ã
+                            Candidates are primarily located in major business cities, facilitating interview arrangements and future collaboration. 
+                            Remote work policies and relocation support plans need consideration.
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('detailedAnalysis').innerHTML = analysisHTML;
+        }
+
+        function generateRiskAssessment(data) {
+            const seniorLevel = data.candidates.filter(c => c.careerStage === 'Senior Level (30+ years)');
+            const topCountry = data.candidates.reduce((acc, c) => {
+                acc[c.country] = (acc[c.country] || 0) + 1;
+                return acc;
+            }, {});
+            const maxCountryCount = Math.max(...Object.values(topCountry));
+            const geoConcentration = (maxCountryCount / data.total * 100).toFixed(1);
+
+            const riskHTML = `
+                <div class="mb-4">
+                    <div class="risk-high rounded-lg p-4 mb-4">
+                        <h4 class="font-semibold mb-2">
+                            <i class="fas fa-exclamation-circle mr-2"></i>
+                            èµåå±çº§å¹éé£é© / Experience Level Mismatch Risk
+                        </h4>
+                        <p class="mb-2">
+                            <strong>åç° ${seniorLevel.length} åèµæ·±çº§å«åéäºº (30+å¹´ç»éª)</strong>
+                            Found ${seniorLevel.length} senior level candidates (30+ years experience)
+                        </p>
+                        <p class="text-sm">
+                            å»ºè®®ï¼åéäººèµåè¿äºèµæ·±ï¼å¯è½ä¸å½åå²ä½è¦æ±ä¸å¹éï¼éç¹å«è¯ä¼°èä½å¹éåº¦ååå±ç©ºé´ã
+                            Recommendation: Senior-level candidates' experience may be overqualified for current position requirements, 
+                            requiring special assessment of role fit and growth potential.
+                        </p>
+                    </div>
+
+                    <div class="risk-medium rounded-lg p-4 mb-4">
+                        <h4 class="font-semibold mb-2">
+                            <i class="fas fa-map-marker-alt mr-2"></i>
+                            å°çéä¸­åº¦é£é© / Geographic Concentration Risk
+                        </h4>
+                        <p class="mb-2">
+                            <strong>å°çéä¸­åº¦: ${geoConcentration}%</strong>
+                            Geographic concentration: ${geoConcentration}%
+                        </p>
+                        <p class="text-sm">
+                            å»ºè®®ï¼èèè¿ç¨å·¥ä½æ¿ç­ææ¬è¿æ¯æï¼å¹³è¡¡å°çåå¸é£é©ã
+                            Recommendation: Consider remote work policies or relocation support to balance geographic distribution risks.
+                        </p>
+                    </div>
+
+                    <div class="risk-low rounded-lg p-4">
+                        <h4 class="font-semibold mb-2">
+                            <i class="fas fa-dollar-sign mr-2"></i>
+                            èªèµç«äºé£é© / Salary Competition Risk
+                        </h4>
+                        <p class="text-sm">
+                            å»ºè®®ï¼èµæ·±åéäººçèªèµææå¯è½è¶åºé¢ç®èå´ï¼å»ºè®®æåè¿è¡èªèµè°ç åé¢ç®è§åã
+                            Recommendation: Senior candidates' salary expectations may exceed budget constraints, 
+                            recommend conducting salary research and budget planning in advance.
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('riskAssessment').innerHTML = riskHTML;
+        }
+
+        function generateRecommendations(data) {
+            const top = data.candidates.filter(c => c.score >= 90);
+            const strong = data.candidates.filter(c => c.score >= 80);
+
+            const recommendationsHTML = `
+                <div class="space-y-4">
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <h4 class="font-semibold mb-2 text-green-800">
+                            <i class="fas fa-bolt text-green-600 mr-2"></i>
+                            ç«å³è¡å¨å»ºè®® / Immediate Actions
+                        </h4>
+                        <ul class="list-disc list-inside text-green-700 space-y-1">
+                            <li>P0ä¼åçº§ï¼ç«å³èç³» ${top.length} åé¡¶çº§åéäºº (â¥90å) / Immediately contact ${top.length} top candidates (â¥90 points)</li>
+                            <li>P1ä¼åçº§ï¼ä¼åå®æ ${strong.length - top.length} åå¼ºåéäººçµè¯ç­é / Priority phone screening for ${strong.length - top.length} strong candidates</li>
+                            <li>å»ºè®®éç¹å³æ³¨ä¸­é«çº§ç»éªåéäºº(5-20å¹´) / Recommend focusing on mid-to-senior level candidates (5-20 years)</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h4 class="font-semibold mb-2 text-blue-800">
+                            <i class="fas fa-calendar-alt text-blue-600 mr-2"></i>
+                            é¢è¯ç­ç¥å»ºè®® / Interview Strategy
+                        </h4>
+                        <ul class="list-disc list-inside text-blue-700 space-y-1">
+                            <li>å¯¹é¡¶çº§åéäººéç¨å éé¢è¯æµç¨ / Adopt accelerated interview process for top candidates</li>
+                            <li>èµæ·±åéäººéç¹å«è¯ä¼°å²ä½å¹éåº¦ååå±ç©ºé´ / Senior candidates require special assessment of role fit and growth potential</li>
+                            <li>åå¤æç«äºåçèªèµæ¹æ¡ / Prepare competitive salary packages</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <h4 class="font-semibold mb-2 text-yellow-800">
+                            <i class="fas fa-map text-yellow-600 mr-2"></i>
+                            å°çç­ç¥å»ºè®® / Geographic Strategy
+                        </h4>
+                        <ul class="list-disc list-inside text-yellow-700 space-y-1">
+                            <li>èèè¿ç¨å·¥ä½æ¿ç­å¸å¼ä¼è´¨å½éåéäºº / Consider remote work policies to attract quality international candidates</li>
+                            <li>è¯ä¼°æ¬è¿æ¯æåæ¶åºåä½å¯è¡æ§ / Assess relocation support and timezone collaboration feasibility</li>
+                            <li>å»ºç«å¤å°äººæç®¡é / Establish multi-location talent pipeline</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('recommendations').innerHTML = recommendationsHTML;
+        }
+
+        function generateTopCandidates(data) {
+            const topCandidates = data.candidates.slice(0, 10);
+
+            const candidatesHTML = topCandidates.map((candidate, index) => `
+                <div class="border rounded-lg p-4 ${candidate.priorityClass}">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-lg">${index + 1}. ${candidate.name}</h4>
+                            <p class="text-gray-600">è¯å: ${candidate.score} å | ç­çº§: ${candidate.grade}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="inline-block px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                ${candidate.priority}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <strong class="text-gray-700">èä¸é¶æ®µ / Career Stage:</strong>
+                            <p class="text-gray-600">${candidate.careerStage}</p>
+                        </div>
+                        <div>
+                            <strong class="text-gray-700">å°çä½ç½® / Location:</strong>
+                            <p class="text-gray-600">${candidate.city}, ${candidate.country}</p>
+                        </div>
+                        <div>
+                            <strong class="text-gray-700">è¡ä¸èæ¯ / Industry:</strong>
+                            <p class="text-gray-600">${candidate.industry}</p>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-sm">
+                        <strong class="text-gray-700">å½åå¬å¸ / Current Company:</strong>
+                        <p class="text-gray-600">${candidate.company}</p>
+                    </div>
+                    ${candidate.careerStage === 'Senior Level (30+ years)' ? 
+                        '<div class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700"><i class="fas fa-exclamation-triangle mr-1"></i>æ³¨æï¼åéäººèµåè¿äºèµæ·±ï¼éç¹å«è¯ä¼°å²ä½å¹éåº¦ / Note: Candidate may be overqualified, requires special role fit assessment</div>' 
+                        : ''}
+                </div>
+            `).join('');
+
+            document.getElementById('topCandidates').innerHTML = candidatesHTML;
+        }
+    </script>
+</body>
+</html>
+    <script id="html_badge_script1">
+        window.__genspark_remove_badge_link = "https://www.genspark.ai/api/html_badge/" +
+            "remove_badge?token=To%2FBnjzloZ3UfQdcSaYfDodAHeBOz2ZH8bqUZDpy2t0MJD1zFRgM%2B5WPMGfEGyqq07S3%2B7Nkop%2BoRS7ya27cYKKly9RxgulN2yGrmrGkH69BFoKhkF0pthMcVVnW5N3TXhUIufsvIqUVhPQ77AUw5ZpGrl4TKOkUQ7qwBTLxS4zSuX3Gc%2FLNzAxNcZoCoj3dBNtRG1uiYsP2L25KFcxe7aVTmwYU%2FL3%2FwOji5flirCs3lWG7ileKr5z03O%2BLJUbZ8VT7IRiEQZ368IS58%2BCBPFJe2AE%2Fdry%2FC4MdptJ2Q5UoI453EtY%2Bt4MNCp2x7%2Bkd7AJsi0QPK%2FqryZJDstarhJDNpTg%2BS%2FYXN3h2D%2FEstB%2BVKCeCYJa%2FbcDmyG0HQcmOZsHKCb5iNdF7p%2F86gtlBskUiyJIyAgVPQoxFFCkwNhwH6XH%2F3L0w%2BzWNwPfjXZboYPegsKKZ9MuVvvxvXwmkIanZ4Db6PFq8N6Dgtj3Py83KxqRdYiiOu%2BLtFeL%2F%2BUaTaNxXH2Mg15pSu4FQmKw2haRcn9aMX5X%2BEdrn8nNG3Cc%3D";
+        window.__genspark_locale = "zh-CN";
+        window.__genspark_token = "To/BnjzloZ3UfQdcSaYfDodAHeBOz2ZH8bqUZDpy2t0MJD1zFRgM+5WPMGfEGyqq07S3+7Nkop+oRS7ya27cYKKly9RxgulN2yGrmrGkH69BFoKhkF0pthMcVVnW5N3TXhUIufsvIqUVhPQ77AUw5ZpGrl4TKOkUQ7qwBTLxS4zSuX3Gc/LNzAxNcZoCoj3dBNtRG1uiYsP2L25KFcxe7aVTmwYU/L3/wOji5flirCs3lWG7ileKr5z03O+LJUbZ8VT7IRiEQZ368IS58+CBPFJe2AE/dry/C4MdptJ2Q5UoI453EtY+t4MNCp2x7+kd7AJsi0QPK/qryZJDstarhJDNpTg+S/YXN3h2D/EstB+VKCeCYJa/bcDmyG0HQcmOZsHKCb5iNdF7p/86gtlBskUiyJIyAgVPQoxFFCkwNhwH6XH/3L0w+zWNwPfjXZboYPegsKKZ9MuVvvxvXwmkIanZ4Db6PFq8N6Dgtj3Py83KxqRdYiiOu+LtFeL/+UaTaNxXH2Mg15pSu4FQmKw2haRcn9aMX5X+Edrn8nNG3Cc=";
+    </script>
+    
+    <script id="html_notice_dialog_script" src="https://www.genspark.ai/notice_dialog.js"></script>
+    
